@@ -1,15 +1,15 @@
 package cli
 
 import (
-	"flag"
 	"bchain/internal/blockchain"
-	"os"
+	"flag"
 	"fmt"
+	"os"
 	"strconv"
 )
 
 const (
-	addBlockFlagName = "addblock"
+	addBlockFlagName   = "addblock"
 	printChainFlagName = "printchain"
 )
 
@@ -32,7 +32,7 @@ func (cli *CLI) printChainCmd() {
 	fmt.Println()
 	for iter.Next() {
 		block := iter.Block()
-		fmt.Printf("data: %s\nhash: %x\nprevhash: %x\nnonce:%d\nvalid:%s\n\n", 
+		fmt.Printf("data: %s\nhash: %x\nprevhash: %x\nnonce:%d\nvalid:%s\n\n",
 			block.Data, block.Hash, block.PrevHash, block.Nonce, strconv.FormatBool(block.Validate()),
 		)
 	}
@@ -49,7 +49,7 @@ func (cli *CLI) isValidFlags() bool {
 }
 
 func (cli *CLI) Run() {
-	if (!cli.isValidFlags()) {
+	if !cli.isValidFlags() {
 		cli.printHelp()
 		os.Exit(1)
 	}

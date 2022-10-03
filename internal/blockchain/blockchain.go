@@ -6,13 +6,13 @@ import (
 
 type Blockchain struct {
 	tip []byte
-	db *database.DB
+	db  *database.DB
 }
 
 type BlockchainIterator struct {
-	currentHash []byte
+	currentHash  []byte
 	currentBlock *Block
-	db *database.DB
+	db           *database.DB
 }
 
 func NewBlockchain(db *database.DB) (*Blockchain, error) {

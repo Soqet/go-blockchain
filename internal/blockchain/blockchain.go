@@ -72,8 +72,6 @@ func (bci *BlockchainIterator) Next() bool {
 	if err != nil {
 		return false
 	}
-	// fmt.Println(bci.currentHash)
-	// fmt.Println(serializedBlock)
 	block, err := Deserialize(serializedBlock)
 	if err != nil {
 		return false

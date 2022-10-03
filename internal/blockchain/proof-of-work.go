@@ -1,12 +1,10 @@
 package blockchain
 
 import (
-	// "bytes"
 	"crypto/sha256"
 	"math"
 	"math/big"
 	"sync"
-	// "strconv"
 )
 
 type PoW struct {

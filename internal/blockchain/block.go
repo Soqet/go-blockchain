@@ -82,7 +82,6 @@ func Deserialize(data []byte) (*Block, error) {
 	block := new(Block)
 	err := decoder.Decode(block)
 	if err != nil {
-		// fmt.Printf("%s\n%s", string(data), err.Error())
 		return block, err
 	}
 	return block, nil

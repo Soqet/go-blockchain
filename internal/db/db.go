@@ -18,8 +18,8 @@ func NewDb(filePath string) (db *DB, err error) {
 	}
 	_, err = db.db.Exec(`
 		CREATE TABLE IF NOT EXISTS blocks ( 
-			hash TEXT UNIQUE,
-			block TEXT
+			hash BLOB UNIQUE,
+			block BLOB
 		)`,
 	)
 	if err != nil {
@@ -29,12 +29,12 @@ func NewDb(filePath string) (db *DB, err error) {
 }
 
 func (db *DB) AddBlock(hash []byte, block []byte) error {
-	_, err := db.db.Exec("REPLACE INTO blocks ( hash, block ) VALUES ( $1, $2 )", string(hash), string(block))
+	_, err := db.db.Exec("REPLACE INTO blocks ( hash, block ) VALUES ( $1, $2 )", hash, block)
 	return err
 }
 
 func (db *DB) UpdateLast(hash []byte) error {
-	_, err := db.db.Exec("REPLACE INTO blocks ( hash, block ) VALUES ( $1, $2 )", string(hash), "l")
+	_, err := db.db.Exec("REPLACE INTO blocks ( hash, block ) VALUES ( $1, $2 )", "l", hash)
 	return err
 }
 
@@ -45,23 +45,23 @@ func (db *DB) GetBlock(hash []byte) ([]byte, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var block string
+		var block []byte
 		rows.Scan(&block)
-		return []byte(block), nil
+		return block, nil
 	}
 	return []byte{}, nil
 }
 
 func (db *DB) GetLast() ([]byte, error) {
-	rows, err := db.db.Query("SELECT hash FROM blocks WHERE block = $1", "l")
+	rows, err := db.db.Query("SELECT block FROM blocks WHERE hash = $1", "l")
 	if err != nil {
-		return []byte{}, nil
+		return []byte{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var hash string
+		var hash []byte
 		rows.Scan(&hash)
-		return []byte(hash), nil
+		return hash, nil
 	}
 	return []byte{}, nil
 }

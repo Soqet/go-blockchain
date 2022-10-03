@@ -3,10 +3,10 @@ package blockchain
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/gob"
 	"math/big"
 	"strconv"
 	"time"
-	"encoding/gob"
 )
 
 type Block struct {
@@ -78,10 +78,11 @@ func (b *Block) Serialize() ([]byte, error) {
 }
 
 func Deserialize(data []byte) (*Block, error) {
-	block := new(Block)
 	decoder := gob.NewDecoder(bytes.NewReader(data))
+	block := new(Block)
 	err := decoder.Decode(block)
 	if err != nil {
+		// fmt.Printf("%s\n%s", string(data), err.Error())
 		return block, err
 	}
 	return block, nil

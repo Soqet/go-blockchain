@@ -10,34 +10,31 @@ import (
 )
 
 type Block struct {
-	Version   uint32
-	Timestamp int64
-	Data      []byte
-	Hash      []byte
-	PrevHash  []byte
-	Nbits     uint8
-	Nonce     uint64
+	Version      uint32
+	Timestamp    int64
+	Transactions []*Transaction
+	Hash         []byte
+	PrevHash     []byte
+	Nbits        uint8
+	Nonce        uint64
 }
 
-func (b *Block) SetHash() {
-	time := []byte(strconv.FormatInt(b.Timestamp, 10))
-	concat := bytes.Join([][]byte{b.PrevHash, b.Data, time}, []byte{})
-	hash := sha256.Sum256(concat)
-	b.Hash = hash[:]
-}
-
-func NewBlock(data []byte, prevHash []byte) *Block {
+func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
 	block := &Block{
-		Version:   0,
-		Timestamp: time.Now().Unix(),
-		Data:      data,
-		Hash:      []byte{},
-		PrevHash:  prevHash,
-		Nbits:     16,
+		Version:      BlockchainVersion,
+		Timestamp:    time.Now().Unix(),
+		Transactions: transactions,
+		Hash:         []byte{},
+		PrevHash:     prevHash,
+		Nbits:        16,
 	}
 	pow := NewPoW(block)
 	pow.RunParallel()
 	return block
+}
+
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	return NewBlock([]*Transaction{coinbase}, []byte{})
 }
 
 func (b *Block) GetData() []byte {
@@ -49,7 +46,7 @@ func (b *Block) getDataNonce(nonce uint64) []byte {
 		[][]byte{
 			[]byte(strconv.FormatUint(uint64(b.Version), 16)),
 			[]byte(strconv.FormatUint(uint64(b.Timestamp), 16)),
-			b.Data,
+			b.HashTransctions(),
 			b.PrevHash,
 			[]byte(strconv.FormatUint(uint64(b.Nbits), 16)),
 			[]byte(strconv.FormatUint(uint64(nonce), 16)),
@@ -57,6 +54,16 @@ func (b *Block) getDataNonce(nonce uint64) []byte {
 		[]byte{},
 	)
 	return data
+}
+
+func (b *Block) HashTransctions() []byte {
+	var txHashes [][]byte
+	var txHash [32]byte
+	for _, tx := range b.Transactions {
+		txHashes = append(txHashes, tx.ID)
+	}
+	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
+	return txHash[:]
 }
 
 func (b *Block) Validate() bool {

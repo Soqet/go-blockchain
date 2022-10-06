@@ -58,7 +58,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) error {
 		return err
 	}
 	for _, tx := range transactions {
-		if b, err := bc.VerifyTransaction(tx); err == nil || !b {
+		if b, err := bc.VerifyTransaction(tx); err != nil || !b {
 			return errors.New("INVALID TRANSACTION")
 		}
 	}
@@ -112,7 +112,7 @@ func (bc *Blockchain) FindUnspentTX(pubKeyHash []byte) []*Transaction {
 		for _, tx := range block.Transactions {
 		Outs:
 			for i, out := range tx.Vout {
-				if txo, ok := spentTXOs[string(tx.ID)]; !ok {
+				if txo, ok := spentTXOs[string(tx.ID)]; ok {
 					for _, spent := range txo {
 						if spent == int64(i) {
 							continue Outs
@@ -166,7 +166,7 @@ func (bc *Blockchain) NewUTXOTransaction(from string, to string, amount int64) (
 	for txIDstr, outs := range txOuts {
 		txId := []byte(txIDstr)
 		for _, out := range outs {
-			inputs = append(inputs, TXInput{TxID: txId, Vout: out})
+			inputs = append(inputs, TXInput{TxID: txId, Vout: out, Signature: nil, PubKey: wallet.PublicKey})
 		}
 	}
 	outputs = append(outputs, *NewTXO(amount, to))

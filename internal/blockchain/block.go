@@ -84,7 +84,7 @@ func (b *Block) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func Deserialize(data []byte) (*Block, error) {
+func DeserializeBlock(data []byte) (*Block, error) {
 	decoder := gob.NewDecoder(bytes.NewReader(data))
 	block := new(Block)
 	err := decoder.Decode(block)

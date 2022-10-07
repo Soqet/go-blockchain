@@ -11,8 +11,10 @@ const WalletFile = "./wallets.dat"
 const BlockchainVersion = 0
 
 type Blockchain struct {
+	// last block hash
 	tip []byte
 	db  *database.DB
+	utxoset *UTXOset
 }
 
 type BlockchainIterator struct {
@@ -27,10 +29,14 @@ func NewBlockchain(db *database.DB, address string) (*Blockchain, error) {
 		return nil, err
 	}
 	if len(last) > 0 {
-		return &Blockchain{last, db}, nil
+		bc := &Blockchain{tip: last, db: db}
+		bc.utxoset = NewUTXOset(bc)
+		return bc, nil
 	}
 	if address == "" {
-		return &Blockchain{[]byte{}, db}, nil
+		bc := &Blockchain{tip: []byte{}, db: db}
+		bc.utxoset = NewUTXOset(bc)
+		return bc, nil
 	}
 	coinbaseTX, err := NewCoinbaseTX(address, address)
 	if err != nil {
@@ -49,7 +55,9 @@ func NewBlockchain(db *database.DB, address string) (*Blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Blockchain{genesisHash, db}, nil
+	bc := &Blockchain{tip: genesisHash, db: db}
+	bc.utxoset = NewUTXOset(bc)
+	return bc, nil
 }
 
 func (bc *Blockchain) MineBlock(transactions []*Transaction) error {
@@ -90,7 +98,7 @@ func (bci *BlockchainIterator) Next() bool {
 	if err != nil {
 		return false
 	}
-	block, err := Deserialize(serializedBlock)
+	block, err := DeserializeBlock(serializedBlock)
 	if err != nil {
 		return false
 	}
@@ -133,6 +141,36 @@ func (bc *Blockchain) FindUnspentTX(pubKeyHash []byte) []*Transaction {
 		}
 	}
 	return unspentTXs
+}
+
+func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
+	utxo := map[string]TXOutputs{}
+	spentTXOs := make(map[string][]int64)
+	bcIter := bc.Iterator()
+	for bcIter.Next() {
+		block := bcIter.Block()
+		for _, tx := range block.Transactions {
+		Outs:
+			for i, out := range tx.Vout {
+				if txo, ok := spentTXOs[string(tx.ID)]; ok {
+					for _, spent := range txo {
+						if spent == int64(i) {
+							continue Outs
+						}
+					}
+				}
+				outs := utxo[string(tx.ID)]
+				outs.Outputs = append(outs.Outputs, out)
+				utxo[string(tx.ID)] = outs
+			}
+			if !tx.IsCoinbase() {
+				for _, in := range tx.Vin {
+					spentTXOs[string(in.TxID)] = append(spentTXOs[string(in.TxID)], in.Vout)
+				}
+			}
+		}
+	}
+	return utxo
 }
 
 func (bc *Blockchain) FindUnspentTXO(pubKeyHash []byte) []TXOutput {

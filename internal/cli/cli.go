@@ -19,12 +19,28 @@ const (
 type CLI struct {
 	db *database.DB
 	bc *blockchain.Blockchain
+	utxoSet *blockchain.UTXOset
 }
 
 func NewCli(db *database.DB) *CLI {
 	return &CLI{
 		db: db,
 	}
+}
+
+func (cli *CLI) createBlockChain(address string) error {
+	bc, err := blockchain.NewBlockchain(cli.db, address)
+	if err != nil {
+		return err
+	}
+	cli.bc = bc
+	utxoset := blockchain.NewUTXOset(bc)
+	err = utxoset.Reindex()
+	if err != nil {
+		return err
+	}
+	cli.utxoSet = utxoset
+	return nil
 }
 
 func (cli *CLI) sendCmd(from string, to string, amount int64) {
@@ -34,12 +50,11 @@ func (cli *CLI) sendCmd(from string, to string, amount int64) {
 	if b, e := blockchain.ValidateAddress(to); !b || e != nil {
 		fmt.Println("ERROR: Recipient address is not valid")
 	}
-	bc, err := blockchain.NewBlockchain(cli.db, from)
+	err := cli.createBlockChain(from)
 	if err != nil {
 		fmt.Println("Something went wrong")
 		return
 	}
-	cli.bc = bc
 	tx, err := cli.bc.NewUTXOTransaction(from, to, amount)
 	if err != nil {
 		fmt.Println(err)
@@ -54,12 +69,11 @@ func (cli *CLI) sendCmd(from string, to string, amount int64) {
 }
 
 func (cli *CLI) printChainCmd() {
-	bc, err := blockchain.NewBlockchain(cli.db, "")
+	err := cli.createBlockChain("")
 	if err != nil {
 		fmt.Println("Something went wrong")
 		return
 	}
-	cli.bc = bc
 	iter := cli.bc.Iterator()
 	fmt.Println()
 	for iter.Next() {
@@ -106,12 +120,11 @@ func (cli *CLI) printChainCmd() {
 }
 
 func (cli *CLI) getBalance(address string) {
-	bc, err := blockchain.NewBlockchain(cli.db, address)
+	err := cli.createBlockChain(address)
 	if err != nil {
 		fmt.Println("Something went wrong")
 		return
 	}
-	cli.bc = bc
 	var balance int64 = 0
 	pubKeyHash, err := blockchain.ExtractPubKeyHash(address)
 	if err != nil {

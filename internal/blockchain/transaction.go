@@ -31,6 +31,10 @@ type TXOutput struct {
 	PubKeyHash []byte
 }
 
+type TXOutputs struct {
+	Outputs []TXOutput
+}
+
 func NewCoinbaseTX(to string, data string) (*Transaction, error) {
 	if data == "" {
 		data = fmt.Sprintf("coinbase to '%s'", to)
@@ -174,4 +178,24 @@ func NewTXO(value int64, address string) *TXOutput {
 	txo := TXOutput{value, nil}
 	txo.Lock((address))
 	return &txo
+}
+
+func (txos *TXOutputs) Serialize() ([]byte, error){
+	encoded := new(bytes.Buffer)
+	encoder := gob.NewEncoder(encoded)
+	err := encoder.Encode(txos)
+	if err != nil {
+		return nil, err
+	}
+	return encoded.Bytes(), nil
+}
+
+func DeserializeTXO(data []byte) (*TXOutputs, error){
+	decoder := gob.NewDecoder(bytes.NewReader(data))
+	txos := new(TXOutputs)
+	err := decoder.Decode(txos)
+	if err != nil {
+		return txos, err
+	}
+	return txos, nil
 }

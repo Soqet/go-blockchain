@@ -12,12 +12,32 @@ func NewUTXOset(bc *Blockchain) *UTXOset {
 	return &UTXOset{bc: bc}
 }
 
+func (uset *UTXOset) IsActual() (bool, error) {
+	currSetHash, err := uset.bc.db.GetUTXOBlock()
+	if err != nil {
+		return false, err
+	}
+	lastBcHash, err := uset.bc.db.GetLast()
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(currSetHash, lastBcHash), nil
+}
+
+
 func (uset *UTXOset) Reindex() error {
+	if b, e := uset.IsActual(); e != nil && b {
+		return nil
+	}
 	err := uset.bc.db.ClearUTXOset()
 	if err != nil {
 		return err
 	}
-	err = uset.bc.db.UpdateUTXOBlock(uset.bc.tip)
+	lastHash, err := uset.bc.db.GetLast()
+	if err != nil {
+		return err
+	}
+	err = uset.bc.db.UpdateUTXOBlock(lastHash)
 	if err != nil {
 		return err
 	}
@@ -35,8 +55,25 @@ func (uset *UTXOset) Reindex() error {
 	return nil
 }
 
-func (uset *UTXOset) UpdateWithBlock(block *Block) error {
-	for _, tx := range block.Transactions {
+
+// makes reindex if block.PrevHash not last block in utxo set
+func (uset *UTXOset) UpdateWithBlock(lastBlock *Block) error {
+	prevSync, err := uset.bc.db.GetUTXOBlock()
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(prevSync, lastBlock.PrevHash) {
+		err = uset.Reindex()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	err = uset.bc.db.UpdateUTXOBlock(lastBlock.Hash)
+	if err != nil {
+		return err
+	}
+	for _, tx := range lastBlock.Transactions {
 		newOuts := TXOutputs{}
 		newOuts.Outputs = append(newOuts.Outputs, tx.Vout...)
 		serialized, err := newOuts.Serialize()

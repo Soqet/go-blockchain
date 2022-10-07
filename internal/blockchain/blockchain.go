@@ -43,7 +43,7 @@ func NewBlockchain(db *database.DB, address string) (*Blockchain, error) {
 		return nil, err
 	}
 	block := NewGenesisBlock(coinbaseTX)
-	genesisHash, err := block.Serialize()
+	genesisSerialized, err := block.Serialize()
 	if err != nil {
 		return nil, err
 	}
@@ -51,12 +51,13 @@ func NewBlockchain(db *database.DB, address string) (*Blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.AddBlock(block.Hash, genesisHash)
+	err = db.AddBlock(block.Hash, genesisSerialized)
 	if err != nil {
 		return nil, err
 	}
-	bc := &Blockchain{tip: genesisHash, db: db}
+	bc := &Blockchain{tip: block.Hash, db: db}
 	bc.utxoset = NewUTXOset(bc)
+	bc.utxoset.Reindex()
 	return bc, nil
 }
 
@@ -80,6 +81,10 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) error {
 		return err
 	}
 	err = bc.db.AddBlock(newBlock.Hash, newSerialized)
+	if err != nil {
+		return err
+	}
+	err = bc.utxoset.UpdateWithBlock(newBlock)
 	if err != nil {
 		return err
 	}
@@ -194,7 +199,20 @@ func (bc *Blockchain) NewUTXOTransaction(from string, to string, amount int64) (
 		return nil, err
 	}
 	wallet := wallets.GetWallet(from)
-	bal, txOuts, err := bc.FindSpendableOuts(from, amount)
+	var bal int64
+	var txOuts map[string][]int64
+	if b, _ := bc.utxoset.IsActual(); b {
+		pubKey, err := ExtractPubKeyHash(from)
+		if err != nil {
+			return nil, err
+		}
+		bal, txOuts, err = bc.utxoset.FindSpendableOuts(pubKey, amount)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		bal, txOuts, err = bc.FindSpendableOuts(from, amount)
+	}
 	if err != nil {
 		return nil, err
 	}

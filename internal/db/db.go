@@ -177,7 +177,7 @@ func (db *DB) DeleteUTXO(hash []byte) (error) {
 }
 
 func (db *DB) UTXOiterator() (Iterator[UTXOsetElem], error) {
-	rows, err := db.db.Query("SELECT ( hash, utxo ) FROM utxoset WHERE hash != $1", "b")
+	rows, err := db.db.Query("SELECT hash, utxo FROM utxoset WHERE hash != $1", "b")
 	if err != nil {
 		return nil, err
 	}

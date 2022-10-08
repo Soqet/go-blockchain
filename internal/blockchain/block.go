@@ -46,7 +46,7 @@ func (b *Block) getDataNonce(nonce uint64) []byte {
 		[][]byte{
 			[]byte(strconv.FormatUint(uint64(b.Version), 16)),
 			[]byte(strconv.FormatUint(uint64(b.Timestamp), 16)),
-			b.HashTransctions(),
+			b.HashTransactions(),
 			b.PrevHash,
 			[]byte(strconv.FormatUint(uint64(b.Nbits), 16)),
 			[]byte(strconv.FormatUint(uint64(nonce), 16)),
@@ -56,14 +56,13 @@ func (b *Block) getDataNonce(nonce uint64) []byte {
 	return data
 }
 
-func (b *Block) HashTransctions() []byte {
+func (b *Block) HashTransactions() []byte {
 	var txHashes [][]byte
-	var txHash [32]byte
 	for _, tx := range b.Transactions {
 		txHashes = append(txHashes, tx.ID)
 	}
-	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
-	return txHash[:]
+	merkleTree := NewMerkleTree(txHashes)
+	return merkleTree.Root.Data
 }
 
 func (b *Block) Validate() bool {

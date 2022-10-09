@@ -11,40 +11,6 @@ type DB struct {
 	db *sql.DB
 }
 
-type Iterator [T any] interface {
-	Next() bool
-	// must call next before calling get
-	Get() T
-}
-
-type TXOiterator struct {
-	rows *sql.Rows
-}
-
-type UTXOsetElem struct {
-	TxHash []byte
-	Txo []byte
-}
-
-func NewTXOiterator() {
-
-}
-
-func (iter *TXOiterator) Next() bool {
-	if !iter.rows.Next() {
-		iter.rows.Close()
-		return false
-	}
-	return true
-}
-
-func (iter *TXOiterator) Get() UTXOsetElem {
-	res := UTXOsetElem{}
-	iter.rows.Scan(&res.TxHash, &res.Txo)
-	return res
-}
-
-
 func NewDb(blocksPath string) (db *DB, err error) {
 	db = new(DB)
 	db.db, err = sql.Open("sqlite3", blocksPath)
@@ -69,11 +35,20 @@ func NewDb(blocksPath string) (db *DB, err error) {
 	if err != nil {
 		return nil, err
 	}
+	_, err = db.db.Exec(`
+	CREATE TABLE IF NOT EXISTS nodes ( 
+		address STRING UNIQUE,
+		version NUMBER
+	)`,
+	)
+	if err != nil {
+		return nil, err
+	}
 	return db, nil
 }
 
 func (db *DB) ClearUTXOset() error {
-	_, err :=db.db.Exec("DROP TABLE IF EXISTS utxoset")
+	_, err := db.db.Exec("DROP TABLE IF EXISTS utxoset")
 	if err != nil {
 		return err
 	}
@@ -165,7 +140,7 @@ func (db *DB) GetUTXOBlock() ([]byte, error) {
 	return []byte{}, nil
 }
 
-func (db *DB) DeleteUTXO(hash []byte) (error) {
+func (db *DB) DeleteUTXO(hash []byte) error {
 	if string(hash) == "b" {
 		return errors.New("INVALID TX HASH")
 	}
@@ -182,4 +157,57 @@ func (db *DB) UTXOiterator() (Iterator[UTXOsetElem], error) {
 		return nil, err
 	}
 	return &TXOiterator{rows: rows}, nil
+}
+
+func (db *DB) AddKnownNode(address string, version int32) error {
+	if address == "v" {
+		return errors.New("INVALID ADDRESS")
+	}
+	_, err := db.db.Exec("REPLACE INTO nodes ( address, version ) VALUES ( $1, $2 )", address, version)
+	return err
+}
+
+// gets blockchain version of known nodes lists
+func (db *DB) GetVersion() (int32, error) {
+	rows, err := db.db.Query("SELECT version FROM nodes WHERE address = $1", "v")
+	if err != nil {
+		return 0, nil
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var v int32
+		rows.Scan(&v)
+		return v, nil
+	}
+	return 0, nil
+}
+
+func (db *DB) UpdateVersion(version int32) error {
+	_, err := db.db.Exec("REPLACE INTO nodes ( address, version ) VALUES ( $1, $2 )", "v", version)
+	return err
+}
+
+func (db *DB) ClearKnownNodes() error {
+	_, err := db.db.Exec("DROP TABLE IF EXISTS nodes")
+	if err != nil {
+		return err
+	}
+	_, err = db.db.Exec(`
+	CREATE TABLE IF NOT EXISTS nodes ( 
+		address STRING UNIQUE,
+		version NUMBER
+	)`,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DB) KnownNodesIterator() (Iterator[KnownNodesElem], error) {
+	rows, err := db.db.Query("SELECT (address, version) FROM utxoset WHERE address != $1", "v")
+	if err != nil {
+		return nil, err
+	}
+	return &KnownNodesIterator{rows: rows}, nil
 }

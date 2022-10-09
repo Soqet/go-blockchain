@@ -180,7 +180,7 @@ func NewTXO(value int64, address string) *TXOutput {
 	return &txo
 }
 
-func (txos *TXOutputs) Serialize() ([]byte, error){
+func (txos *TXOutputs) Serialize() ([]byte, error) {
 	encoded := new(bytes.Buffer)
 	encoder := gob.NewEncoder(encoded)
 	err := encoder.Encode(txos)
@@ -190,7 +190,7 @@ func (txos *TXOutputs) Serialize() ([]byte, error){
 	return encoded.Bytes(), nil
 }
 
-func DeserializeTXO(data []byte) (*TXOutputs, error){
+func DeserializeTXO(data []byte) (*TXOutputs, error) {
 	decoder := gob.NewDecoder(bytes.NewReader(data))
 	txos := new(TXOutputs)
 	err := decoder.Decode(txos)

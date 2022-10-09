@@ -17,9 +17,10 @@ type Block struct {
 	PrevHash     []byte
 	Nbits        uint8
 	Nonce        uint64
+	Height       uint64
 }
 
-func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
+func NewBlock(transactions []*Transaction, prevHash []byte, height uint64) *Block {
 	block := &Block{
 		Version:      BlockchainVersion,
 		Timestamp:    time.Now().Unix(),
@@ -27,6 +28,7 @@ func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
 		Hash:         []byte{},
 		PrevHash:     prevHash,
 		Nbits:        16,
+		Height:       height,
 	}
 	pow := NewPoW(block)
 	pow.RunParallel()
@@ -34,7 +36,7 @@ func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
 }
 
 func NewGenesisBlock(coinbase *Transaction) *Block {
-	return NewBlock([]*Transaction{coinbase}, []byte{})
+	return NewBlock([]*Transaction{coinbase}, []byte{}, 0)
 }
 
 func (b *Block) GetData() []byte {
@@ -50,6 +52,7 @@ func (b *Block) getDataNonce(nonce uint64) []byte {
 			b.PrevHash,
 			[]byte(strconv.FormatUint(uint64(b.Nbits), 16)),
 			[]byte(strconv.FormatUint(uint64(nonce), 16)),
+			[]byte(strconv.FormatUint(uint64(b.Height), 16)),
 		},
 		[]byte{},
 	)

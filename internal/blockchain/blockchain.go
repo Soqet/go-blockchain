@@ -8,12 +8,12 @@ import (
 )
 
 const WalletFile = "./wallets.dat"
-const BlockchainVersion = 0
+const BlockchainVersion = 1
 
 type Blockchain struct {
 	// last block hash
-	tip []byte
-	db  *database.DB
+	tip     []byte
+	db      *database.DB
 	utxoset *UTXOset
 }
 
@@ -71,7 +71,15 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) error {
 			return errors.New("INVALID TRANSACTION")
 		}
 	}
-	newBlock := NewBlock(transactions, lastHash)
+	lastBlockSer, err := bc.db.GetBlock(lastHash)
+	if err != nil {
+		return err
+	}
+	lastBlock, err := DeserializeBlock(lastBlockSer)
+	if err != nil {
+		return err
+	}
+	newBlock := NewBlock(transactions, lastHash, lastBlock.Height+1)
 	err = bc.db.UpdateLast(newBlock.Hash)
 	if err != nil {
 		return err
@@ -294,6 +302,9 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 }
 
 func (bc *Blockchain) VerifyTransaction(tx *Transaction) (bool, error) {
+	if tx.IsCoinbase() {
+		return true, nil
+	}
 	prevTXs := make(map[string]Transaction)
 	for _, vin := range tx.Vin {
 		prevTX, err := bc.FindTransaction(vin.TxID)
@@ -304,4 +315,20 @@ func (bc *Blockchain) VerifyTransaction(tx *Transaction) (bool, error) {
 	}
 
 	return tx.Verify(prevTXs)
+}
+
+func (bc *Blockchain) GetBestHeight() (uint64, error) {
+	lastHash, err := bc.db.GetLast()
+	if err != nil {
+		return 0, err
+	}
+	lastBlockSer, err := bc.db.GetBlock(lastHash)
+	if err != nil {
+		return 0, err
+	}
+	lastBlock, err := DeserializeBlock(lastBlockSer)
+	if err != nil {
+		return 0, err
+	}
+	return lastBlock.Height, nil
 }

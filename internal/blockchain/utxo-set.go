@@ -1,4 +1,4 @@
-package blockchain 
+package blockchain
 
 import (
 	"bytes"
@@ -23,7 +23,6 @@ func (uset *UTXOset) IsActual() (bool, error) {
 	}
 	return bytes.Equal(currSetHash, lastBcHash), nil
 }
-
 
 func (uset *UTXOset) Reindex() error {
 	if b, e := uset.IsActual(); e != nil && b {
@@ -54,7 +53,6 @@ func (uset *UTXOset) Reindex() error {
 	}
 	return nil
 }
-
 
 // makes reindex if block.PrevHash not last block in utxo set
 func (uset *UTXOset) UpdateWithBlock(lastBlock *Block) error {
@@ -146,7 +144,7 @@ func (uset *UTXOset) FindSpendableOuts(pubKeyHash []byte, amount int64) (int64, 
 			}
 		}
 	}
-	return balance, spendableOuts, nil 
+	return balance, spendableOuts, nil
 }
 
 func (uset *UTXOset) FindUnspentTXO(pubKeyHash []byte) ([]TXOutput, error) {

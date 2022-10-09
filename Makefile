@@ -17,4 +17,4 @@ build:
 	go build -o ./builds/main.$(ending) $(files)
 
 fmt: 
-	go fmt $(cmdpath) ./internal/blockchain ./internal/db ./internal/cli
+	go fmt $(cmdpath) ./internal/blockchain ./internal/db ./internal/cli ./internal/network

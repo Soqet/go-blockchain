@@ -57,7 +57,6 @@ func (w Wallet) Address(version uint32) (string, error) {
 }
 
 func GetAddress(pubKeyHash []byte, version uint32) (string, error) {
-	// pubKeyHash := sha256.Sum256(publicKey)
 	binVers := make([]byte, 4)
 	binary.LittleEndian.PutUint32(binVers, version)
 	vData := append(binVers, pubKeyHash[:]...)
